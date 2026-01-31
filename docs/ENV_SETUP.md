@@ -33,23 +33,30 @@ supabase login
 # Link your project
 supabase link --project-ref your-project-id
 
-# Set secrets for Edge Functions
-supabase secrets set GOLD_API_KEY=your-goldapi-key
+# Set secrets for Edge Functions (chỉ cần VN_GOLD_API_KEY)
 supabase secrets set VN_GOLD_API_KEY=your-vnappmob-key
 ```
 
-## API Keys
+## API Sources
 
-### GoldAPI.io (World Gold Prices)
-- Sign up at: https://www.goldapi.io/
-- Free plan: 100 requests/month
-- Get your API key from the dashboard
+### World Gold Prices (Gold-API.com)
+- **Không cần API key** - Hoàn toàn miễn phí
+- **Không giới hạn requests**
+- Tự động lấy giá XAU/USD mỗi 5 phút
+- API: `https://api.gold-api.com/price/XAU`
+- Docs: https://www.gold-api.com/docs
 
 ### VNAppMob (Vietnam Gold Prices)
 - Request API key at: https://vapi.vnappmob.com/api/request_api_key?scope=gold
 - Key expires after 15 days (need to renew)
 
+### Exchange Rate (exchangerate-api.com)
+- **Không cần API key** - Miễn phí
+- API: `https://api.exchangerate-api.com/v4/latest/USD`
+
 ## Notes
 
-- Without Supabase credentials, the app will use mock data
-- The app gracefully falls back to mock data if API calls fail
+- Giá vàng thế giới từ Gold-API.com (miễn phí, không giới hạn)
+- Giá vàng Việt Nam từ VNAppMob API (cần API key)
+- Tỷ giá USD/VND từ exchangerate-api.com (miễn phí)
+- High/Low 24h và Change được tính từ dữ liệu lịch sử trong database
