@@ -1,12 +1,15 @@
-import { ReactNode } from 'react'
+import { ReactNode, useState } from 'react'
 import { Header } from './Header'
 import { BottomNav } from './BottomNav'
+import { FloatingChatButton, ChatModal } from '@/components/ai'
 
 interface LayoutProps {
   children: ReactNode
 }
 
 export default function Layout({ children }: LayoutProps) {
+  const [isChatOpen, setIsChatOpen] = useState(false)
+
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
       <Header />
@@ -14,6 +17,10 @@ export default function Layout({ children }: LayoutProps) {
         {children}
       </main>
       <BottomNav />
+      
+      {/* AI Chat */}
+      <FloatingChatButton onClick={() => setIsChatOpen(true)} />
+      <ChatModal isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} />
     </div>
   )
 }

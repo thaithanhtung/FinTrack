@@ -103,3 +103,54 @@ export interface SpreadInfo {
   spreadPercent: number
   lossIfSellNow: number // Lỗ nếu bán ngay (tính trên 1 lượng)
 }
+
+// ============================================
+// AI Types
+// ============================================
+
+// Gợi ý đầu tư
+export type AIRecommendation = 'BUY' | 'SELL' | 'HOLD'
+
+// Snapshot giá tại thời điểm phân tích
+export interface AIPriceSnapshot {
+  worldPrice: number
+  worldChange: number
+  worldChangePercent: number
+  worldHigh24h: number
+  worldLow24h: number
+  vnPrice: number
+  exchangeRate: number
+}
+
+// Kết quả phân tích AI
+export interface AIAnalysis {
+  content: string
+  recommendation: AIRecommendation
+  confidence: number // 0-100
+  priceSnapshot: AIPriceSnapshot
+  createdAt: string
+  expiresAt: string
+}
+
+// Tin nhắn chat
+export interface ChatMessage {
+  id: string
+  role: 'user' | 'assistant'
+  content: string
+  timestamp: Date
+}
+
+// Response từ AI API
+export interface AIAnalysisResponse {
+  success: boolean
+  data?: AIAnalysis
+  error?: string
+}
+
+export interface AIChatResponse {
+  success: boolean
+  data?: {
+    message: string
+  }
+  error?: string
+}

@@ -179,3 +179,71 @@ BEGIN
   WHERE created_at < NOW() - INTERVAL '1 year';
 END;
 $$ LANGUAGE plpgsql;
+
+-- =============================================
+-- AI Analysis Cache Table
+-- =============================================
+CREATE TABLE IF NOT EXISTS ai_analysis_cache (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  analysis_type VARCHAR(50) NOT NULL,
+  content TEXT NOT NULL,
+  recommendation VARCHAR(20), -- 'BUY', 'SELL', 'HOLD'
+  confidence INTEGER, -- 0-100
+  price_snapshot JSONB,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  expires_at TIMESTAMPTZ NOT NULL
+);
+
+-- Index for quick lookup
+CREATE INDEX IF NOT EXISTS idx_ai_analysis_type ON ai_analysis_cache(analysis_type);
+CREATE INDEX IF NOT EXISTS idx_ai_analysis_expires ON ai_analysis_cache(expires_at);
+
+-- Enable RLS
+ALTER TABLE ai_analysis_cache ENABLE ROW LEVEL SECURITY;
+
+-- Public read access
+CREATE POLICY "Public read ai_analysis_cache" ON ai_analysis_cache 
+  FOR SELECT USING (true);
+
+-- Service role insert/update/delete
+CREATE POLICY "Service insert ai_analysis_cache" ON ai_analysis_cache 
+  FOR INSERT WITH CHECK (true);
+
+CREATE POLICY "Service update ai_analysis_cache" ON ai_analysis_cache 
+  FOR UPDATE USING (true);
+
+CREATE POLICY "Service delete ai_analysis_cache" ON ai_analysis_cache 
+  FOR DELETE USING (true);
+
+-- Function to get valid cached analysis
+CREATE OR REPLACE FUNCTION get_cached_analysis(p_analysis_type VARCHAR)
+RETURNS TABLE (
+  id UUID,
+  analysis_type VARCHAR(50),
+  content TEXT,
+  recommendation VARCHAR(20),
+  confidence INTEGER,
+  price_snapshot JSONB,
+  created_at TIMESTAMPTZ,
+  expires_at TIMESTAMPTZ
+) AS $$
+BEGIN
+  RETURN QUERY
+  SELECT a.id, a.analysis_type, a.content, a.recommendation, a.confidence,
+         a.price_snapshot, a.created_at, a.expires_at
+  FROM ai_analysis_cache a
+  WHERE a.analysis_type = p_analysis_type
+    AND a.expires_at > NOW()
+  ORDER BY a.created_at DESC
+  LIMIT 1;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Function to cleanup expired cache
+CREATE OR REPLACE FUNCTION cleanup_expired_ai_cache()
+RETURNS void AS $$
+BEGIN
+  DELETE FROM ai_analysis_cache 
+  WHERE expires_at < NOW();
+END;
+$$ LANGUAGE plpgsql;
