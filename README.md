@@ -5,10 +5,12 @@
 ## Tính năng
 
 ### 1. Giá vàng thế giới (XAU/USD)
-- Hiển thị giá real-time từ GoldAPI.io
-- % thay đổi trong ngày
-- Giá cao/thấp 24h
-- Thời gian cập nhật
+- Hiển thị giá real-time từ Investing.com API
+- **Direct client-side call** - Không qua server, không bị CORS
+- OHLC data (Open, High, Low, Close) mỗi 15 phút
+- % thay đổi trong 40 giờ (160 điểm dữ liệu)
+- Tự động refresh mỗi 5 phút
+- Cập nhật khi user quay lại tab
 
 ### 2. Giá vàng Việt Nam
 - Vàng SJC
@@ -37,41 +39,45 @@
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                     External APIs                            │
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────┐  │
-│  │ GoldAPI.io  │  │  VNAppMob   │  │ ExchangeRate-API    │  │
-│  └──────┬──────┘  └──────┬──────┘  └──────────┬──────────┘  │
-└─────────┼────────────────┼────────────────────┼─────────────┘
-          │                │                    │
-          ▼                ▼                    ▼
-┌─────────────────────────────────────────────────────────────┐
-│                    Supabase Backend                          │
+│                    React Client (Browser)                    │
 │  ┌─────────────────────────────────────────────────────┐    │
-│  │              Edge Functions (Cron)                   │    │
-│  │  • fetch-world-gold (GoldAPI.io)                    │    │
-│  │  • fetch-vn-gold (VNAppMob)                         │    │
-│  │  • fetch-all-prices (Combined)                      │    │
-│  └──────────────────────┬──────────────────────────────┘    │
-│                         │                                    │
-│                         ▼                                    │
-│  ┌─────────────────────────────────────────────────────┐    │
-│  │              PostgreSQL Database                     │    │
-│  │  • world_gold_prices                                │    │
-│  │  • vn_gold_prices                                   │    │
-│  │  • exchange_rates                                   │    │
-│  │  • world_gold_history                               │    │
-│  └──────────────────────┬──────────────────────────────┘    │
-└─────────────────────────┼───────────────────────────────────┘
-                          │
-                          ▼
-┌─────────────────────────────────────────────────────────────┐
-│                    React Client                              │
-│  ┌─────────────────────────────────────────────────────┐    │
-│  │              Supabase Client                         │    │
-│  │  • Query cached data from database                  │    │
-│  │  • No direct API calls to external services         │    │
-│  └─────────────────────────────────────────────────────┘    │
-└─────────────────────────────────────────────────────────────┘
+│  │              Client-side API Calls                   │    │
+│  │  • World Gold → Investing.com (direct)              │    │
+│  │  • VN Gold → Supabase Database (cached)             │    │
+│  │  • Exchange Rate → Supabase Database (cached)       │    │
+│  └──────────────────┬──────────────┬────────────────────┘    │
+└────────────────────┼──────────────┼──────────────────────────┘
+                     │              │
+          Direct API │              │ Query Database
+                     │              │
+     ┌───────────────▼───┐          │
+     │  Investing.com    │          │
+     │  (No CORS block   │          │
+     │   from browser)   │          │
+     └───────────────────┘          │
+                                    ▼
+           ┌─────────────────────────────────────────────────┐
+           │            Supabase Backend                      │
+           │  ┌──────────────────────────────────────────┐   │
+           │  │       PostgreSQL Database                 │   │
+           │  │  • vn_gold_prices                        │   │
+           │  │  • exchange_rates                        │   │
+           │  │  • world_gold_history (from cron)        │   │
+           │  └──────────────▲───────────────────────────┘   │
+           │                 │                                │
+           │  ┌──────────────┴───────────────────────────┐   │
+           │  │      Edge Functions (Cron Jobs)          │   │
+           │  │  • fetch-vn-gold (VNAppMob)              │   │
+           │  │  • fetch-all-prices (VN + Exchange)      │   │
+           │  └──────────────┬───────────────────────────┘   │
+           └────────────────┼────────────────────────────────┘
+                            │
+                ┌───────────┴───────────┐
+                │                       │
+         ┌──────▼──────┐       ┌───────▼──────────┐
+         │  VNAppMob   │       │ ExchangeRate-API │
+         │  (API Key)  │       │    (Free tier)   │
+         └─────────────┘       └──────────────────┘
 ```
 
 ## Công nghệ
@@ -178,9 +184,13 @@ SELECT cron.schedule(
 ## API Sources
 
 ### Giá vàng thế giới
-- **GoldAPI.io**: https://www.goldapi.io
-- Free plan: 100 requests/tháng
-- Endpoint: `GET /api/XAU/USD`
+- **Investing.com**: https://api.investing.com
+- **Client-side API** - Gọi trực tiếp từ browser (không bị CORS)
+- Real-time OHLC data (15-minute intervals)
+- 160 data points = 40 giờ lịch sử
+- Endpoint: `/api/financialdata/68/historical/chart/?interval=PT15M&pointscount=160`
+- Update frequency: Tự động mỗi 5 phút (TanStack Query)
+- **No API key required** - Free public API
 
 ### Giá vàng Việt Nam
 - **VNAppMob**: https://vapi.vnappmob.com

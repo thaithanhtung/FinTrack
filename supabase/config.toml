@@ -48,5 +48,5 @@ verify_jwt = false
 [functions.fetch-all-prices]
 verify_jwt = false
 
-[functions.ai-analysis]
+[functions.save-world-gold]
 verify_jwt = false

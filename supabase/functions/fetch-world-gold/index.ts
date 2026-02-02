@@ -1,25 +1,27 @@
-// Supabase Edge Function: Fetch World Gold Price from Gold-API.com
-// FREE API - No API key required, no rate limits
+// Supabase Edge Function: Fetch World Gold Price from Investing.com
+// Real-time OHLC data with 15-minute intervals
 // Deploy: supabase functions deploy fetch-world-gold
 
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers':
-    'authorization, x-client-info, apikey, content-type',
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type",
 };
 
 // ============================================
-// Fetch World Gold Price from Gold-API.com
+// Fetch World Gold Price from Investing.com
 // ============================================
-interface GoldApiComResponse {
-  name: string;
-  price: number;
-  symbol: string;
-  updatedAt: string;
-  updatedAtReadable: string;
-}
+type InvestingDataPoint = [
+  number, // timestamp
+  number, // open
+  number, // high
+  number, // low
+  number, // close
+  number, // volume1
+  number // volume2
+];
 
 interface WorldGoldData {
   price: number;
@@ -30,64 +32,65 @@ interface WorldGoldData {
   low24h: number;
 }
 
-async function fetchWorldGoldFromGoldApiCom(
+async function fetchWorldGoldFromInvesting(
   supabase: ReturnType<typeof createClient>
 ): Promise<WorldGoldData> {
-  const response = await fetch('https://api.gold-api.com/price/XAU', {
-    headers: {
-      Accept: 'application/json',
-    },
-  });
+  // Fetch 60 points (15 hours of data at 15-minute intervals)
+  const response = await fetch(
+    "https://api.investing.com/api/financialdata/68/historical/chart/?interval=PT1M&pointscount=60",
+    {
+      headers: {
+        Accept: "application/json",
+        "User-Agent": "Mozilla/5.0 (compatible; FinTrack/1.0)",
+      },
+    }
+  );
 
   if (!response.ok) {
-    throw new Error(`Gold-API.com error: ${response.status}`);
+    throw new Error(`Investing.com API error: ${response.status}`);
   }
 
-  const data: GoldApiComResponse = await response.json();
+  const data: InvestingDataPoint[] = await response.json();
 
-  if (!data.price || data.price <= 0) {
-    throw new Error('Invalid price from Gold-API.com');
+  console.log("Investing.com data:", data);
+
+  if (!Array.isArray(data) || data.length === 0) {
+    throw new Error("Invalid or empty data from Investing.com");
   }
 
-  const currentPrice = data.price;
+  // Data format: [timestamp, open, high, low, close, volume1, volume2]
+  // Data is ordered oldest to newest
+  const latestCandle = data[data.length - 1]; // Newest data point
+  const firstCandle = data[0]; // Oldest data point (for previous close)
 
-  // Lấy giá trước đó từ database để tính change
-  let previousClose = currentPrice;
-  let high24h = currentPrice;
-  let low24h = currentPrice;
+  const currentPrice = latestCandle[4]; // close price
+  const openPrice = latestCandle[1];
+  const highPrice = latestCandle[2];
+  const lowPrice = latestCandle[3];
 
-  try {
-    // Lấy giá cũ nhất trong 24h để làm previous close
-    const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+  // Use first candle's close as previous close (15 hours ago)
+  const previousClose = firstCandle[4];
 
-    const { data: oldPrices } = await supabase
-      .from('world_gold_prices')
-      .select('price')
-      .gte('created_at', oneDayAgo)
-      .order('created_at', { ascending: true })
-      .limit(1);
+  // Calculate high/low from all data points
+  const allHighs = data.map((d) => d[2]);
+  const allLows = data.map((d) => d[3]);
+  const high24h = Math.max(...allHighs);
+  const low24h = Math.min(...allLows);
 
-    if (oldPrices && oldPrices.length > 0) {
-      previousClose = Number(oldPrices[0].price);
-    }
-
-    // Lấy high/low trong 24h
-    const { data: priceRange } = await supabase
-      .from('world_gold_prices')
-      .select('price')
-      .gte('created_at', oneDayAgo);
-
-    if (priceRange && priceRange.length > 0) {
-      const prices = priceRange.map((p) => Number(p.price));
-      high24h = Math.max(...prices, currentPrice);
-      low24h = Math.min(...prices, currentPrice);
-    }
-  } catch (err) {
-    console.error('Error fetching previous prices:', err);
-  }
-
+  // Calculate change
   const change = currentPrice - previousClose;
   const changePercent = previousClose > 0 ? (change / previousClose) * 100 : 0;
+
+  console.log("Investing.com data:", {
+    totalPoints: data.length,
+    currentPrice,
+    previousClose,
+    change,
+    changePercent,
+    high24h,
+    low24h,
+    timestamp: new Date(latestCandle[0]).toISOString(),
+  });
 
   return {
     price: currentPrice,
@@ -103,26 +106,26 @@ async function fetchWorldGoldFromGoldApiCom(
 // Main Handler
 // ============================================
 Deno.serve(async (req) => {
-  if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders });
+  if (req.method === "OPTIONS") {
+    return new Response("ok", { headers: corsHeaders });
   }
 
   try {
-    const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
-    const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
+    const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 
     if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
-      throw new Error('Supabase credentials are not set');
+      throw new Error("Supabase credentials are not set");
     }
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-    // Fetch world gold price from Gold-API.com
-    const worldData = await fetchWorldGoldFromGoldApiCom(supabase);
+    // Fetch world gold price from Investing.com
+    const worldData = await fetchWorldGoldFromInvesting(supabase);
 
     // Insert to world_gold_prices
     const { error: priceError } = await supabase
-      .from('world_gold_prices')
+      .from("world_gold_prices")
       .insert({
         price: worldData.price,
         previous_close: worldData.previousClose,
@@ -130,7 +133,7 @@ Deno.serve(async (req) => {
         change_percent: worldData.changePercent,
         high_24h: worldData.high24h,
         low_24h: worldData.low24h,
-        source: 'Gold-API.com',
+        source: "Investing.com",
       });
 
     if (priceError) {
@@ -139,7 +142,7 @@ Deno.serve(async (req) => {
 
     // Insert to history
     const { error: historyError } = await supabase
-      .from('world_gold_history')
+      .from("world_gold_history")
       .insert({
         price: worldData.price,
         open_price: worldData.previousClose,
@@ -149,30 +152,30 @@ Deno.serve(async (req) => {
       });
 
     if (historyError) {
-      console.error('History insert error:', historyError);
+      console.error("History insert error:", historyError);
     }
 
     return new Response(
       JSON.stringify({
         success: true,
         data: worldData,
-        source: 'Gold-API.com',
+        source: "Investing.com",
         timestamp: new Date().toISOString(),
       }),
       {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 200,
       }
     );
   } catch (error) {
-    console.error('Error:', error.message);
+    console.error("Error:", error.message);
     return new Response(
       JSON.stringify({
         success: false,
         error: error.message,
       }),
       {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 500,
       }
     );

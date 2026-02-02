@@ -2,24 +2,26 @@
 // This function is called by cron job every 5 minutes
 // Deploy: supabase functions deploy fetch-all-prices
 
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers':
-    'authorization, x-client-info, apikey, content-type',
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type",
 };
 
 // ============================================
-// Fetch World Gold Price from Gold-API.com (FREE, no API key needed)
+// Fetch World Gold Price from Investing.com
 // ============================================
-interface GoldApiComResponse {
-  name: string;
-  price: number;
-  symbol: string;
-  updatedAt: string;
-  updatedAtReadable: string;
-}
+type InvestingDataPoint = [
+  number, // timestamp
+  number, // open
+  number, // high
+  number, // low
+  number, // close
+  number, // volume1
+  number // volume2
+];
 
 interface WorldGoldData {
   price: number;
@@ -30,64 +32,65 @@ interface WorldGoldData {
   low24h: number;
 }
 
-async function fetchWorldGoldFromGoldApiCom(
+async function fetchWorldGoldFromInvesting(
   supabase: ReturnType<typeof createClient>
 ): Promise<WorldGoldData> {
-  const response = await fetch('https://api.gold-api.com/price/XAU', {
-    headers: {
-      Accept: 'application/json',
-    },
-  });
+  // Fetch 60 points (15 hours of data at 15-minute intervals)
+  const response = await fetch(
+    "https://api.investing.com/api/financialdata/68/historical/chart/?interval=PT1M&pointscount=60",
+    {
+      headers: {
+        Accept: "application/json",
+        "User-Agent": "Mozilla/5.0 (compatible; FinTrack/1.0)",
+      },
+    }
+  );
 
   if (!response.ok) {
-    throw new Error(`Gold-API.com error: ${response.status}`);
+    throw new Error(`Investing.com API error: ${response.status}`);
   }
 
-  const data: GoldApiComResponse = await response.json();
+  const data: InvestingDataPoint[] = await response.json();
 
-  if (!data.price || data.price <= 0) {
-    throw new Error('Invalid price from Gold-API.com');
+  console.log("Investing.com data (fetch-all-prices):", data);
+
+  if (!Array.isArray(data) || data.length === 0) {
+    throw new Error("Invalid or empty data from Investing.com");
   }
 
-  const currentPrice = data.price;
+  // Data format: [timestamp, open, high, low, close, volume1, volume2]
+  // Data is ordered oldest to newest
+  const latestCandle = data[data.length - 1]; // Newest data point
+  const firstCandle = data[0]; // Oldest data point (for previous close)
 
-  // Lấy giá trước đó từ database để tính change
-  let previousClose = currentPrice;
-  let high24h = currentPrice;
-  let low24h = currentPrice;
+  const currentPrice = latestCandle[4]; // close price
+  const openPrice = latestCandle[1];
+  const highPrice = latestCandle[2];
+  const lowPrice = latestCandle[3];
 
-  try {
-    // Lấy giá cũ nhất trong 24h để làm previous close
-    const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+  // Use first candle's close as previous close (15 hours ago)
+  const previousClose = firstCandle[4];
 
-    const { data: oldPrices } = await supabase
-      .from('world_gold_prices')
-      .select('price')
-      .gte('created_at', oneDayAgo)
-      .order('created_at', { ascending: true })
-      .limit(1);
+  // Calculate high/low from all data points
+  const allHighs = data.map((d) => d[2]);
+  const allLows = data.map((d) => d[3]);
+  const high24h = Math.max(...allHighs);
+  const low24h = Math.min(...allLows);
 
-    if (oldPrices && oldPrices.length > 0) {
-      previousClose = Number(oldPrices[0].price);
-    }
-
-    // Lấy high/low trong 24h
-    const { data: priceRange } = await supabase
-      .from('world_gold_prices')
-      .select('price')
-      .gte('created_at', oneDayAgo);
-
-    if (priceRange && priceRange.length > 0) {
-      const prices = priceRange.map((p) => Number(p.price));
-      high24h = Math.max(...prices, currentPrice);
-      low24h = Math.min(...prices, currentPrice);
-    }
-  } catch (err) {
-    console.error('Error fetching previous prices:', err);
-  }
-
+  // Calculate change
   const change = currentPrice - previousClose;
   const changePercent = previousClose > 0 ? (change / previousClose) * 100 : 0;
+
+  console.log("Investing.com data (fetch-all-prices):", {
+    totalPoints: data.length,
+    currentPrice,
+    previousClose,
+    change,
+    changePercent,
+    high24h,
+    low24h,
+    timestamp: new Date(latestCandle[0]).toISOString(),
+  });
 
   return {
     price: currentPrice,
@@ -129,22 +132,22 @@ interface VNAppMobResponse {
 }
 
 function parsePrice(priceStr: string | number | undefined | null): number {
-  if (typeof priceStr === 'number') return priceStr;
-  if (!priceStr || typeof priceStr !== 'string') return 0;
+  if (typeof priceStr === "number") return priceStr;
+  if (!priceStr || typeof priceStr !== "string") return 0;
   // Remove commas, dots (except decimal), and parse
-  const cleaned = priceStr.replace(/,/g, '');
+  const cleaned = priceStr.replace(/,/g, "");
   const parsed = parseFloat(cleaned);
   return isNaN(parsed) ? 0 : Math.round(parsed);
 }
 
-async function fetchVNGold(brand: 'sjc' | 'doji' | 'pnj', apiKey: string) {
+async function fetchVNGold(brand: "sjc" | "doji" | "pnj", apiKey: string) {
   try {
     const response = await fetch(
       `https://vapi.vnappmob.com/api/v2/gold/${brand}`,
       {
         headers: {
           Authorization: `Bearer ${apiKey}`,
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
       }
     );
@@ -189,12 +192,12 @@ function processVNGoldItem(
     const sellPrice = parsePrice(item.sell_1l);
     if (buyPrice > 0 && sellPrice > 0) {
       records.push({
-        gold_type: 'SJC',
+        gold_type: "SJC",
         brand,
         buy_price: buyPrice,
         sell_price: sellPrice,
-        region: '1L',
-        source: 'VNAppMob',
+        region: "1L",
+        source: "VNAppMob",
       });
     }
   }
@@ -205,12 +208,12 @@ function processVNGoldItem(
     const sellPrice = parsePrice(item.sell_1c);
     if (buyPrice > 0 && sellPrice > 0) {
       records.push({
-        gold_type: 'SJC',
+        gold_type: "SJC",
         brand,
         buy_price: buyPrice,
         sell_price: sellPrice,
-        region: '1C',
-        source: 'VNAppMob',
+        region: "1C",
+        source: "VNAppMob",
       });
     }
   }
@@ -221,12 +224,12 @@ function processVNGoldItem(
     const sellPrice = parsePrice(item.sell_5c);
     if (buyPrice > 0 && sellPrice > 0) {
       records.push({
-        gold_type: 'SJC',
+        gold_type: "SJC",
         brand,
         buy_price: buyPrice,
         sell_price: sellPrice,
-        region: '5C',
-        source: 'VNAppMob',
+        region: "5C",
+        source: "VNAppMob",
       });
     }
   }
@@ -237,12 +240,12 @@ function processVNGoldItem(
     const sellPrice = parsePrice(item.sell_nhan1c);
     if (buyPrice > 0 && sellPrice > 0) {
       records.push({
-        gold_type: 'NHAN_9999',
+        gold_type: "NHAN_9999",
         brand,
         buy_price: buyPrice,
         sell_price: sellPrice,
         region: null,
-        source: 'VNAppMob',
+        source: "VNAppMob",
       });
     }
   }
@@ -253,12 +256,12 @@ function processVNGoldItem(
     const sellPrice = parsePrice(item.sell_nutrang_9999);
     if (buyPrice > 0 && sellPrice > 0) {
       records.push({
-        gold_type: 'NUTRANG_9999',
+        gold_type: "NUTRANG_9999",
         brand,
         buy_price: buyPrice,
         sell_price: sellPrice,
         region: null,
-        source: 'VNAppMob',
+        source: "VNAppMob",
       });
     }
   }
@@ -269,12 +272,12 @@ function processVNGoldItem(
     const sellPrice = parsePrice(item.sell_nutrang_99);
     if (buyPrice > 0 && sellPrice > 0) {
       records.push({
-        gold_type: 'NUTRANG_99',
+        gold_type: "NUTRANG_99",
         brand,
         buy_price: buyPrice,
         sell_price: sellPrice,
         region: null,
-        source: 'VNAppMob',
+        source: "VNAppMob",
       });
     }
   }
@@ -285,12 +288,12 @@ function processVNGoldItem(
     const sellPrice = parsePrice(item.sell_nutrang_75);
     if (buyPrice > 0 && sellPrice > 0) {
       records.push({
-        gold_type: 'NUTRANG_75',
+        gold_type: "NUTRANG_75",
         brand,
         buy_price: buyPrice,
         sell_price: sellPrice,
         region: null,
-        source: 'VNAppMob',
+        source: "VNAppMob",
       });
     }
   }
@@ -305,15 +308,15 @@ async function fetchExchangeRate(): Promise<number> {
   try {
     // Using exchangerate-api.com free tier
     const response = await fetch(
-      'https://api.exchangerate-api.com/v4/latest/USD'
+      "https://api.exchangerate-api.com/v4/latest/USD"
     );
     if (!response.ok) {
-      throw new Error('Exchange rate API error');
+      throw new Error("Exchange rate API error");
     }
     const data = await response.json();
     return data.rates.VND || 24500; // Fallback to approximate rate
   } catch (error) {
-    console.error('Exchange rate error:', error);
+    console.error("Exchange rate error:", error);
     return 24500; // Fallback
   }
 }
@@ -322,8 +325,8 @@ async function fetchExchangeRate(): Promise<number> {
 // Main Handler
 // ============================================
 Deno.serve(async (req) => {
-  if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders });
+  if (req.method === "OPTIONS") {
+    return new Response("ok", { headers: corsHeaders });
   }
 
   const results = {
@@ -342,36 +345,36 @@ Deno.serve(async (req) => {
   };
 
   try {
-    const VN_GOLD_API_KEY = Deno.env.get('VN_GOLD_API_KEY');
-    const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
-    const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    const VN_GOLD_API_KEY = Deno.env.get("VN_GOLD_API_KEY");
+    const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
+    const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 
     if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
-      throw new Error('Supabase credentials are not set');
+      throw new Error("Supabase credentials are not set");
     }
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
     // ============================================
-    // 1. Fetch World Gold Price (from Gold-API.com - FREE, no API key)
+    // 1. Fetch World Gold Price (from Investing.com)
     // ============================================
     try {
-      const worldData = await fetchWorldGoldFromGoldApiCom(supabase);
+      const worldData = await fetchWorldGoldFromInvesting(supabase);
 
-      const { error } = await supabase.from('world_gold_prices').insert({
+      const { error } = await supabase.from("world_gold_prices").insert({
         price: worldData.price,
         previous_close: worldData.previousClose,
         change: worldData.change,
         change_percent: worldData.changePercent,
         high_24h: worldData.high24h,
         low_24h: worldData.low24h,
-        source: 'Gold-API.com',
+        source: "Investing.com",
       });
 
       if (error) throw error;
 
       // Insert to history
-      await supabase.from('world_gold_history').insert({
+      await supabase.from("world_gold_history").insert({
         price: worldData.price,
         open_price: worldData.previousClose,
         high_price: worldData.high24h,
@@ -383,7 +386,7 @@ Deno.serve(async (req) => {
       results.worldGold.price = worldData.price;
     } catch (error) {
       results.worldGold.error = error.message;
-      console.error('World gold error:', error);
+      console.error("World gold error:", error);
     }
 
     // ============================================
@@ -392,9 +395,9 @@ Deno.serve(async (req) => {
     if (VN_GOLD_API_KEY) {
       try {
         const [sjcItems, dojiItems, pnjItems] = await Promise.all([
-          fetchVNGold('sjc', VN_GOLD_API_KEY),
-          fetchVNGold('doji', VN_GOLD_API_KEY),
-          fetchVNGold('pnj', VN_GOLD_API_KEY),
+          fetchVNGold("sjc", VN_GOLD_API_KEY),
+          fetchVNGold("doji", VN_GOLD_API_KEY),
+          fetchVNGold("pnj", VN_GOLD_API_KEY),
         ]);
 
         // Debug: log raw data từ API
@@ -416,30 +419,33 @@ Deno.serve(async (req) => {
 
         // Process từng brand
         for (const item of sjcItems) {
-          insertRecords.push(...processVNGoldItem(item, 'SJC'));
+          insertRecords.push(...processVNGoldItem(item, "SJC"));
         }
         for (const item of dojiItems) {
-          insertRecords.push(...processVNGoldItem(item, 'DOJI'));
+          insertRecords.push(...processVNGoldItem(item, "DOJI"));
         }
         for (const item of pnjItems) {
-          insertRecords.push(...processVNGoldItem(item, 'PNJ'));
+          insertRecords.push(...processVNGoldItem(item, "PNJ"));
         }
 
         if (insertRecords.length > 0) {
           const { error } = await supabase
-            .from('vn_gold_prices')
+            .from("vn_gold_prices")
             .insert(insertRecords);
           if (error) throw error;
+
+          // Also insert to history table
+          await supabase.from("vn_gold_history").insert(insertRecords);
         }
 
         results.vnGold.success = true;
         results.vnGold.recordsInserted = insertRecords.length;
       } catch (error) {
         results.vnGold.error = error.message;
-        console.error('VN gold error:', error);
+        console.error("VN gold error:", error);
       }
     } else {
-      results.vnGold.error = 'VN_GOLD_API_KEY not set';
+      results.vnGold.error = "VN_GOLD_API_KEY not set";
     }
 
     // ============================================
@@ -448,16 +454,16 @@ Deno.serve(async (req) => {
     try {
       const rate = await fetchExchangeRate();
 
-      const { error } = await supabase.from('exchange_rates').insert({
+      const { error } = await supabase.from("exchange_rates").insert({
         usd_to_vnd: rate,
-        source: 'exchangerate-api.com',
+        source: "exchangerate-api.com",
       });
 
       if (error) throw error;
       results.exchangeRate.success = true;
     } catch (error) {
       results.exchangeRate.error = error.message;
-      console.error('Exchange rate error:', error);
+      console.error("Exchange rate error:", error);
     }
 
     return new Response(
@@ -467,12 +473,12 @@ Deno.serve(async (req) => {
         timestamp: new Date().toISOString(),
       }),
       {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 200,
       }
     );
   } catch (error) {
-    console.error('Fatal error:', error.message);
+    console.error("Fatal error:", error.message);
     return new Response(
       JSON.stringify({
         success: false,
@@ -480,7 +486,7 @@ Deno.serve(async (req) => {
         results,
       }),
       {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 500,
       }
     );

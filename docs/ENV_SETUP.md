@@ -40,12 +40,13 @@ supabase secrets set OPENAI_API_KEY=sk-your-openai-api-key
 
 ## API Sources
 
-### World Gold Prices (Gold-API.com)
-- **Không cần API key** - Hoàn toàn miễn phí
-- **Không giới hạn requests**
-- Tự động lấy giá XAU/USD mỗi 5 phút
-- API: `https://api.gold-api.com/price/XAU`
-- Docs: https://www.gold-api.com/docs
+### World Gold Prices (Investing.com)
+- **Real-time OHLC data** - Open, High, Low, Close prices
+- **15-minute intervals** - Cập nhật mỗi 15 phút
+- **60 data points** - 15 giờ lịch sử
+- **Tự động lấy mỗi 5 phút** qua Supabase Edge Functions
+- API: `https://api.investing.com/api/financialdata/68/historical/chart/?interval=PT15M&pointscount=60`
+- Note: API được gọi qua Edge Function để bypass CORS
 
 ### VNAppMob (Vietnam Gold Prices)
 - Request API key at: https://vapi.vnappmob.com/api/request_api_key?scope=gold
