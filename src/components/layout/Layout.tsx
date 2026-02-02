@@ -1,6 +1,7 @@
 import { ReactNode } from "react";
 import { Header } from "./Header";
 import { BottomNav } from "./BottomNav";
+import { PhoneFrame } from "./PhoneFrame";
 
 interface LayoutProps {
   children: ReactNode;
@@ -8,12 +9,14 @@ interface LayoutProps {
 
 export default function Layout({ children }: LayoutProps) {
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex flex-col">
-      <Header />
-      <main className="flex-1 max-w-lg mx-auto w-full px-4 py-4 pb-24">
-        {children}
-      </main>
-      <BottomNav />
-    </div>
+    <PhoneFrame>
+      <div className="h-full bg-gray-50 dark:bg-gray-950 flex flex-col relative">
+        <Header />
+        <main className="flex-1 w-full px-4 py-4 pb-32 overflow-y-auto">
+          <div className="max-w-lg mx-auto">{children}</div>
+        </main>
+        <BottomNav />
+      </div>
+    </PhoneFrame>
   );
 }
