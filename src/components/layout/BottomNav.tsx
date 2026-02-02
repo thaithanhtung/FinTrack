@@ -24,7 +24,6 @@ const navItems = [
 export function BottomNav() {
   const { t } = useTranslation();
   const location = useLocation();
-  const [activeIndex, setActiveIndex] = useState(0);
   const [indicatorStyle, setIndicatorStyle] = useState({ left: 0, width: 0 });
   const navRefs = useRef<(HTMLAnchorElement | null)[]>([]);
 
@@ -33,8 +32,6 @@ export function BottomNav() {
       (item) => item.to === location.pathname
     );
     if (currentIndex !== -1) {
-      setActiveIndex(currentIndex);
-
       const activeElement = navRefs.current[currentIndex];
       if (activeElement) {
         const parent = activeElement.parentElement;

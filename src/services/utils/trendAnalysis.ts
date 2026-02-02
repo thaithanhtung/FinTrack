@@ -42,8 +42,8 @@ export function getSMAAtPoint(
   prices: PriceHistoryPoint[],
   index: number,
   period: number
-): number | null {
-  if (index < period - 1 || index >= prices.length) return null;
+): number | undefined {
+  if (index < period - 1 || index >= prices.length) return undefined;
 
   const periodPrices = prices
     .slice(index - period + 1, index + 1)

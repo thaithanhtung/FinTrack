@@ -110,7 +110,6 @@ export function calculateAveragePrice(
   if (prices.length === 0) return [];
 
   const grouped = new Map<string, number[]>();
-  const now = new Date();
 
   prices.forEach((point) => {
     let key: string;

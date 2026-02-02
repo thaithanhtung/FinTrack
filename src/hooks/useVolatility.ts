@@ -11,7 +11,7 @@ import type { VolatilityData } from "@/services/utils/volatility";
 import type { PriceHistoryPoint } from "@/types";
 
 export function useVolatility(
-  period: "week" | "month" | "3months" | "year" = "month"
+  period: "week" | "month" | "3months" | "6months" | "year" = "month"
 ) {
   // Memoize date range to prevent unnecessary recalculations
   const { start, end } = useMemo(() => {
@@ -27,6 +27,9 @@ export function useVolatility(
         break;
       case "3months":
         start.setMonth(end.getMonth() - 3);
+        break;
+      case "6months":
+        start.setMonth(end.getMonth() - 6);
         break;
       case "year":
         start.setFullYear(end.getFullYear() - 1);

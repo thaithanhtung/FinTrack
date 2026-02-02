@@ -19,7 +19,7 @@ interface AlertItemProps {
 }
 
 function AlertItem({ alert, onToggle, onRemove }: AlertItemProps) {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const isWorldGold = alert.goldType === "XAU";
   const ConditionIcon = alert.condition === "ABOVE" ? TrendingUp : TrendingDown;
   const conditionColor =

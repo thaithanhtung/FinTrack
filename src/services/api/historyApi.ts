@@ -1,5 +1,5 @@
 import { supabase, isSupabaseConfigured } from "@/lib";
-import type { GoldType, TimeRange } from "@/types";
+import type { GoldType } from "@/types";
 
 export interface VNGoldHistoryRow {
   id: string;
@@ -206,7 +206,7 @@ export async function getPriceByDate(
       if (error) throw error;
       if (!data || data.length === 0) return null;
 
-      return Number(data[0].price);
+      return Number((data[0] as { price: number }).price);
     } else {
       let query = supabase
         .from("vn_gold_history")
@@ -228,7 +228,7 @@ export async function getPriceByDate(
       if (error) throw error;
       if (!data || data.length === 0) return null;
 
-      return Number(data[0].sell_price);
+      return Number((data[0] as { sell_price: number }).sell_price);
     }
   } catch (error) {
     console.error("Error fetching price by date:", error);

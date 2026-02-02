@@ -1,5 +1,5 @@
 import { Card, CardHeader } from "./Card";
-import { Skeleton, SkeletonText } from "./Skeleton";
+import { Skeleton } from "./Skeleton";
 
 export function WorldGoldCardSkeleton() {
   return (

@@ -9,7 +9,7 @@ import {
 } from "recharts";
 import { Card, CardHeader } from "@/components/common";
 import { useTranslation } from "react-i18next";
-import { formatUSD, formatDate } from "@/services/utils";
+import { formatDate } from "@/services/utils";
 import type { PriceHistoryPoint } from "@/types";
 
 interface TrendChartProps {
@@ -28,8 +28,6 @@ function CustomTooltip({
   active?: boolean;
   payload?: any[];
 }) {
-  const { t } = useTranslation();
-
   if (!active || !payload || !payload.length) return null;
 
   const data = payload[0].payload;

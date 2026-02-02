@@ -1,6 +1,5 @@
 import { Card, CardHeader } from "@/components/common";
 import { TrendingUp, TrendingDown, Minus, Info } from "lucide-react";
-import { useTranslation } from "react-i18next";
 
 interface StatisticsCardProps {
   title: string;
@@ -23,8 +22,6 @@ export function StatisticsCard({
   tooltip,
   className = "",
 }: StatisticsCardProps) {
-  const { t } = useTranslation();
-
   const trendColors = {
     up: "text-up dark:text-green-400",
     down: "text-down dark:text-red-400",

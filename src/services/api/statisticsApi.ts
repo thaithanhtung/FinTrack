@@ -1,5 +1,4 @@
 import { supabase, isSupabaseConfigured } from "@/lib";
-import type { TimeRange } from "@/types";
 
 export interface StatisticsData {
   average: number;
@@ -26,20 +25,23 @@ export async function getPriceStatistics(
       p_start_date: startDate.toISOString(),
       p_end_date: endDate.toISOString(),
       p_type: type,
-    });
+    } as any);
 
     if (error) throw error;
 
-    if (!data || data.length === 0) {
-      return null;
-    }
+    // Type guard for data
+    if (!data) return null;
 
+    const dataArray = Array.isArray(data) ? data : [data];
+    if (dataArray.length === 0) return null;
+
+    const row = dataArray[0] as any;
     return {
-      average: Number(data[0].avg_price) || 0,
-      high: Number(data[0].high_price) || 0,
-      low: Number(data[0].low_price) || 0,
-      volatility: Number(data[0].volatility) || 0,
-      totalRecords: Number(data[0].total_records) || 0,
+      average: Number(row.avg_price) || 0,
+      high: Number(row.high_price) || 0,
+      low: Number(row.low_price) || 0,
+      volatility: Number(row.volatility) || 0,
+      totalRecords: Number(row.total_records) || 0,
     };
   } catch (error) {
     console.error("Error fetching statistics:", error);
@@ -64,18 +66,21 @@ export async function getPriceDirection(
       p_start_date: startDate.toISOString(),
       p_end_date: endDate.toISOString(),
       p_type: type,
-    });
+    } as any);
 
     if (error) throw error;
 
-    if (!data || data.length === 0) {
-      return null;
-    }
+    // Type guard for data
+    if (!data) return null;
 
+    const dataArray = Array.isArray(data) ? data : [data];
+    if (dataArray.length === 0) return null;
+
+    const row = dataArray[0] as any;
     return {
-      upDays: Number(data[0].up_days) || 0,
-      downDays: Number(data[0].down_days) || 0,
-      neutralDays: Number(data[0].neutral_days) || 0,
+      upDays: Number(row.up_days) || 0,
+      downDays: Number(row.down_days) || 0,
+      neutralDays: Number(row.neutral_days) || 0,
     };
   } catch (error) {
     console.error("Error fetching price direction:", error);
