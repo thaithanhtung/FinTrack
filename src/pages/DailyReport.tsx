@@ -11,7 +11,6 @@ import { supabase } from "@/lib/supabase";
 import {
   Bell,
   Clock,
-  Send,
   CheckCircle,
   AlertCircle,
   Info,
@@ -232,7 +231,7 @@ export default function DailyReport() {
           title="Cấu hình Telegram"
           subtitle="Liên kết tài khoản Telegram để nhận thông báo"
           action={
-            <Send size={18} className="text-blue-600 dark:text-blue-400" />
+            <User size={18} className="text-blue-600 dark:text-blue-400" />
           }
         />
 
@@ -648,29 +647,6 @@ export default function DailyReport() {
           </pre>
         </div>
       </Card>
-
-      {/* Test Button */}
-      {profile?.telegramChatId && (
-        <Card>
-          <div className="text-center">
-            <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
-              Kiểm tra xem bạn có nhận được thông báo không
-            </p>
-            <Button
-              onClick={() => {
-                // Trigger function test
-                alert(
-                  "Tính năng test sẽ được thêm sau. Hiện tại dùng Supabase function invoke để test."
-                );
-              }}
-              className="mx-auto"
-            >
-              <Send size={18} />
-              Gửi báo cáo thử
-            </Button>
-          </div>
-        </Card>
-      )}
 
       {/* Help */}
       <Card>
