@@ -1,11 +1,19 @@
 import { useState, FormEvent } from "react";
-import { Bell, TrendingUp, TrendingDown, Info } from "lucide-react";
+import {
+  Bell,
+  TrendingUp,
+  TrendingDown,
+  Info,
+  CheckCircle,
+} from "lucide-react";
 import { Card, CardHeader, Button } from "@/components/common";
 import { useAlerts } from "@/hooks";
 import { useAuth } from "@/contexts/AuthContext";
 import { formatVND, formatUSD } from "@/services/utils";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
+import { fetchUserProfile } from "@/services/api/userProfileApi";
 import type { GoldType, AlertCondition } from "@/types";
 
 export function AlertForm() {
@@ -15,6 +23,13 @@ export function AlertForm() {
   const [goldType, setGoldType] = useState<GoldType | "XAU">("XAU");
   const [condition, setCondition] = useState<AlertCondition>("ABOVE");
   const [targetPrice, setTargetPrice] = useState("");
+
+  // Fetch user profile to check Telegram connection
+  const { data: profile } = useQuery({
+    queryKey: ["userProfile", user?.id],
+    queryFn: () => fetchUserProfile(user!.id),
+    enabled: !!user,
+  });
 
   const isWorldGold = goldType === "XAU";
 
@@ -76,26 +91,122 @@ export function AlertForm() {
         action={<Bell size={18} className="text-gold-500 dark:text-gold-400" />}
       />
 
-      {/* Telegram Setup Info */}
-      <div className="mb-4 p-3 rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
-        <div className="flex items-start gap-2">
-          <Info
-            size={16}
-            className="text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0"
-          />
-          <div className="flex-1 text-sm">
-            <p className="text-blue-700 dark:text-blue-300 mb-1">
-              <strong>Nhận thông báo qua Telegram:</strong>
-            </p>
-            <p className="text-blue-600 dark:text-blue-400 text-xs">
-              Vào{" "}
-              <Link to="/settings" className="underline font-medium">
-                Settings
-              </Link>{" "}
-              để liên kết tài khoản Telegram của bạn.
-            </p>
+      {/* Telegram Setup Info - Show based on connection status */}
+      <div className="mb-4 space-y-3">
+        {profile?.telegramChatId ? (
+          /* Already Connected */
+          <div className="p-3 rounded-xl bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800">
+            <div className="flex items-start gap-2">
+              <CheckCircle
+                size={18}
+                className="text-green-600 dark:text-green-400 mt-0.5 flex-shrink-0"
+              />
+              <div className="flex-1">
+                <p className="text-sm text-green-700 dark:text-green-300 font-medium mb-1">
+                  ✅ Telegram đã được kết nối
+                </p>
+                <p className="text-xs text-green-600 dark:text-green-400">
+                  Bạn sẽ nhận thông báo alert qua Telegram • Chat ID:{" "}
+                  {profile.telegramChatId}
+                </p>
+              </div>
+            </div>
           </div>
-        </div>
+        ) : (
+          /* Not Connected - Show Warning */
+          <>
+            {/* Important Warning */}
+            <div className="p-4 rounded-xl bg-red-50 dark:bg-red-900/20 border-2 border-red-300 dark:border-red-700">
+              <div className="flex items-start gap-3">
+                <Info
+                  size={20}
+                  className="text-red-600 dark:text-red-400 mt-0.5 flex-shrink-0"
+                />
+                <div className="flex-1">
+                  <p className="text-sm font-bold text-red-800 dark:text-red-200 mb-2">
+                    ⚠️ QUAN TRỌNG - Để nhận thông báo Alert qua Telegram
+                  </p>
+                  <div className="text-xs text-red-700 dark:text-red-300 space-y-2">
+                    <p className="font-medium">Bạn PHẢI làm 2 việc sau:</p>
+                    <div className="bg-red-100 dark:bg-red-900/40 p-3 rounded-lg border border-red-200 dark:border-red-800">
+                      <p className="font-bold mb-2">
+                        🤖 Bước 1: Kết nối bot (BẮT BUỘC)
+                      </p>
+                      <ol className="list-decimal list-inside space-y-1.5 ml-2">
+                        <li>
+                          Tìm bot:{" "}
+                          <a
+                            href="https://t.me/fintrack_gold_bot"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="font-bold text-red-800 dark:text-red-200 hover:underline"
+                          >
+                            @fintrack_gold_bot
+                          </a>
+                        </li>
+                        <li>
+                          Nhấn{" "}
+                          <code className="bg-red-200 dark:bg-red-800 px-2 py-0.5 rounded font-mono font-bold">
+                            START
+                          </code>{" "}
+                          hoặc gửi{" "}
+                          <code className="bg-red-200 dark:bg-red-800 px-2 py-0.5 rounded font-mono font-bold">
+                            /start
+                          </code>
+                        </li>
+                        <li>Chờ bot trả lời</li>
+                      </ol>
+
+                      <p className="font-bold mt-3 mb-2">
+                        📝 Bước 2: Cấu hình Chat ID
+                      </p>
+                      <p className="ml-2">
+                        Vào{" "}
+                        <Link
+                          to="/settings"
+                          className="font-bold text-red-800 dark:text-red-200 hover:underline"
+                        >
+                          Settings
+                        </Link>{" "}
+                        để nhập Telegram Chat ID của bạn
+                      </p>
+                    </div>
+                    <p className="text-xs italic">
+                      💡 <strong>Tại sao?</strong> Telegram không cho bot gửi
+                      tin đầu tiên. Bạn phải /start trước để bot biết bạn đồng ý
+                      nhận thông báo.
+                    </p>
+                    <p className="text-xs font-medium">
+                      ❌ Bỏ qua bước 1 → Bot không thể gửi alert cho bạn (lỗi
+                      "Forbidden")
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Quick Link to Settings */}
+            <div className="p-3 rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
+              <div className="flex items-start gap-2">
+                <Info
+                  size={16}
+                  className="text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0"
+                />
+                <div className="flex-1 text-sm">
+                  <p className="text-blue-700 dark:text-blue-300 font-medium mb-1">
+                    📱 Hoàn tất cấu hình Telegram:
+                  </p>
+                  <Link
+                    to="/settings"
+                    className="inline-flex items-center gap-1 text-blue-600 dark:text-blue-400 text-xs hover:underline font-medium"
+                  >
+                    → Đi tới Settings để nhập Chat ID
+                  </Link>
+                </div>
+              </div>
+            </div>
+          </>
+        )}
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">

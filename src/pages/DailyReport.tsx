@@ -374,6 +374,67 @@ export default function DailyReport() {
             </div>
           ) : (
             <div className="space-y-3">
+              {/* IMPORTANT WARNING - Must /start first */}
+              <div className="p-4 rounded-xl bg-red-50 dark:bg-red-900/20 border-2 border-red-300 dark:border-red-700">
+                <div className="flex items-start gap-3">
+                  <AlertCircle
+                    size={20}
+                    className="text-red-600 dark:text-red-400 mt-0.5 flex-shrink-0"
+                  />
+                  <div className="flex-1">
+                    <p className="text-sm font-bold text-red-800 dark:text-red-200 mb-2">
+                      ⚠️ QUAN TRỌNG - ĐỌC TRƯỚC KHI LẤY CHAT ID
+                    </p>
+                    <div className="text-xs text-red-700 dark:text-red-300 space-y-2">
+                      <p className="font-medium">
+                        Bạn PHẢI thực hiện bước này TRƯỚC để bot có thể gửi báo
+                        cáo cho bạn:
+                      </p>
+                      <div className="bg-red-100 dark:bg-red-900/40 p-3 rounded-lg border border-red-200 dark:border-red-800">
+                        <p className="font-bold mb-2">🤖 Bước bắt buộc:</p>
+                        <ol className="list-decimal list-inside space-y-1.5 ml-2">
+                          <li>
+                            Tìm bot của chúng tôi trên Telegram:{" "}
+                            <a
+                              href="https://t.me/fintrack_gold_bot"
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="font-bold text-red-800 dark:text-red-200 hover:underline"
+                            >
+                              @fintrack_gold_bot
+                            </a>
+                          </li>
+                          <li>
+                            Nhấn nút{" "}
+                            <code className="bg-red-200 dark:bg-red-800 px-2 py-0.5 rounded font-mono font-bold">
+                              START
+                            </code>{" "}
+                            hoặc gửi{" "}
+                            <code className="bg-red-200 dark:bg-red-800 px-2 py-0.5 rounded font-mono font-bold">
+                              /start
+                            </code>
+                          </li>
+                          <li>Chờ bot trả lời (xác nhận kết nối)</li>
+                          <li>SAU ĐÓ mới lấy Chat ID ở bên dưới</li>
+                        </ol>
+                      </div>
+                      <p className="text-xs italic">
+                        💡 <strong>Tại sao?</strong> Telegram không cho phép bot
+                        gửi tin đầu tiên cho user. Bạn phải nhắn{" "}
+                        <code className="bg-red-200 dark:bg-red-800 px-1.5 py-0.5 rounded font-mono">
+                          /start
+                        </code>{" "}
+                        trước để cho bot biết bạn đồng ý nhận tin nhắn.
+                      </p>
+                      <p className="text-xs font-medium">
+                        ❌ Nếu bỏ qua bước này → Bot không thể gửi báo cáo cho
+                        bạn (lỗi "Forbidden")
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
               <div className="p-4 rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
                 <div className="flex items-start gap-2">
                   <Info
@@ -391,6 +452,9 @@ export default function DailyReport() {
                         ✅ Phương pháp 1: Dùng Bot (Khuyến nghị)
                       </p>
                       <ol className="text-xs text-blue-600 dark:text-blue-400 space-y-1.5 list-decimal list-inside ml-2">
+                        <li className="text-red-600 dark:text-red-400 font-bold">
+                          [ĐÃ LÀM BƯỚC BẮT BUỘC Ở TRÊN CHƯA? ⚠️]
+                        </li>
                         <li>
                           Mở Telegram và tìm bot{" "}
                           <strong className="font-semibold">
