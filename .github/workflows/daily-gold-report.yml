@@ -1,0 +1,49 @@
+name: Daily Gold Report
+
+on:
+  schedule:
+    # Chạy mỗi giờ từ 6:00 sáng đến 6:00 chiều (Vietnam time)
+    # Cron format: minute hour day month day-of-week
+    # Vietnam time: 6 AM - 6 PM = UTC: 23:00 (prev day) - 11:00
+    - cron: '0 23,0-11 * * *'  # Hourly: 6 AM, 7 AM, 8 AM, 9 AM, 12 PM, 4 PM, 6 PM Vietnam time
+  workflow_dispatch: # Allow manual trigger for testing
+
+jobs:
+  send-daily-report:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v3
+
+      - name: Send Daily Gold Report via Telegram
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          echo "📊 Triggering daily gold report..."
+          
+          response=$(curl -s -w "\n%{http_code}" -X POST \
+            "${SUPABASE_URL}/functions/v1/daily-gold-report" \
+            -H "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}" \
+            -H "Content-Type: application/json")
+          
+          http_code=$(echo "$response" | tail -n1)
+          body=$(echo "$response" | sed '$d')
+          
+          echo "HTTP Status: $http_code"
+          echo "Response: $body"
+          
+          if [ "$http_code" -ne 200 ]; then
+            echo "❌ Error: Edge function returned status $http_code"
+            exit 1
+          fi
+          
+          echo "✅ Daily gold report sent successfully!"
+          
+          # Parse and display results
+          sent=$(echo "$body" | grep -o '"sent":[0-9]*' | cut -d':' -f2)
+          failed=$(echo "$body" | grep -o '"failed":[0-9]*' | cut -d':' -f2)
+          
+          echo "📧 Reports sent: $sent"
+          echo "❌ Failed: $failed"

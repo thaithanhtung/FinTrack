@@ -3,3 +3,5 @@ export * from "./worldGoldApi";
 export * from "./exchangeApi";
 export * from "./statisticsApi";
 export * from "./historyApi";
+export * from "./alertsApi";
+export * from "./userProfileApi";

@@ -7,16 +7,19 @@ import {
   Settings,
   BarChart3,
   History,
+  Calendar,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { motion } from "framer-motion";
 import { useState, useEffect, useRef } from "react";
+import { useThemeStore } from "../../stores/themeStore";
 
 const navItems = [
   { to: "/", icon: Home, key: "home" },
   { to: "/charts", icon: LineChart, key: "charts" },
   { to: "/statistics", icon: BarChart3, key: "statistics" },
   { to: "/history", icon: History, key: "history" },
+  { to: "/daily-report", icon: Calendar, key: "daily_report" },
   { to: "/converter", icon: Calculator, key: "converter" },
   { to: "/alerts", icon: Bell, key: "alerts" },
   { to: "/settings", icon: Settings, key: "settings" },
@@ -25,6 +28,7 @@ const navItems = [
 export function BottomNav() {
   const { t } = useTranslation();
   const location = useLocation();
+  const { theme } = useThemeStore();
   const [buttonPosition, setButtonPosition] = useState({ x: 0, width: 0 });
   const navRefs = useRef<(HTMLAnchorElement | null)[]>([]);
 
@@ -35,6 +39,24 @@ export function BottomNav() {
 
   const activeItem = currentIndex !== -1 ? navItems[currentIndex] : navItems[0];
   const ActiveIcon = activeItem.icon;
+
+  // Dynamic colors based on theme
+  const isDark = theme === "dark";
+  const bgColor = isDark
+    ? "rgba(15, 23, 42, 0.95)"
+    : "rgba(255, 255, 255, 0.95)";
+  const navBgColor = isDark ? "#0f172a" : "#ffdead";
+  const buttonBg = isDark ? "#3b82f6" : "#E0605A"; // Blue for dark, Coral for light
+  const buttonShadow = isDark
+    ? "0 8px 20px rgba(59, 130, 246, 0.25), 0 4px 10px rgba(0, 0, 0, 0.3)"
+    : "0 8px 20px rgba(224, 96, 90, 0.25), 0 4px 10px rgba(0, 0, 0, 0.1)";
+  const curveCutoutBg = navBgColor;
+  const curveShadow = isDark
+    ? `-4px -4px 0 0 rgba(15, 23, 42, 0.95)`
+    : `4px -4px 0 0 rgba(255, 255, 255, 0.95)`;
+  const curveShadowRight = isDark
+    ? `4px -4px 0 0 rgba(15, 23, 42, 0.95)`
+    : `-4px -4px 0 0 rgba(255, 255, 255, 0.95)`;
 
   // Calculate button position based on active item
   useEffect(() => {
@@ -53,8 +75,8 @@ export function BottomNav() {
 
   return (
     <nav className="fixed md:absolute bottom-0 left-0 right-0 z-50 md:pb-0 pb-safe">
-      {/* Background - Cream/beige */}
-      <div className="absolute bottom-0 left-0 right-0 h-[70px] bg-[#ffdead] dark:bg-amber-950/30 rounded-t-[25px] border-t border-gray-200/50" />
+      {/* Background */}
+      <div className="absolute bottom-0 left-0 right-0 h-[70px] bg-[#ffdead] dark:bg-[#0f172a] border-t border-gray-200/50 dark:border-gray-700/50" />
 
       <div className="relative max-w-lg mx-auto px-2">
         {/* Nav items */}
@@ -90,7 +112,7 @@ export function BottomNav() {
                     transform: "translateX(-50%) translateY(-50%)",
                   }}
                 >
-                  {/* Half-circle white background with side curves */}
+                  {/* Half-circle background with side curves */}
                   <div
                     style={{
                       position: "absolute",
@@ -100,7 +122,7 @@ export function BottomNav() {
                       width: "72px",
                       height: "36px",
                       borderRadius: "0 0 36px 36px",
-                      background: "rgba(255, 255, 255, 0.95)",
+                      background: bgColor,
                     }}
                   >
                     {/* Left curve cutout */}
@@ -112,8 +134,8 @@ export function BottomNav() {
                         width: "16px",
                         height: "16px",
                         borderRadius: "0 16px 0 0",
-                        background: "#ffdead",
-                        boxShadow: "4px -4px 0 0 rgba(255, 255, 255, 0.95)",
+                        background: curveCutoutBg,
+                        boxShadow: curveShadow,
                       }}
                     />
                     {/* Right curve cutout */}
@@ -125,13 +147,13 @@ export function BottomNav() {
                         width: "16px",
                         height: "16px",
                         borderRadius: "16px 0 0 0",
-                        background: "#ffdead",
-                        boxShadow: "-4px -4px 0 0 rgba(255, 255, 255, 0.95)",
+                        background: curveCutoutBg,
+                        boxShadow: curveShadowRight,
                       }}
                     />
                   </div>
 
-                  {/* Coral button */}
+                  {/* Active button */}
                   <motion.button
                     key={activeItem.key}
                     initial={{ scale: 0.9 }}
@@ -143,13 +165,12 @@ export function BottomNav() {
                       width: "50px",
                       height: "50px",
                       borderRadius: "9999px",
-                      backgroundColor: "#E0605A",
+                      backgroundColor: buttonBg,
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
                       border: "none",
-                      boxShadow:
-                        "0 8px 20px rgba(224, 96, 90, 0.25), 0 4px 10px rgba(0, 0, 0, 0.1)",
+                      boxShadow: buttonShadow,
                     }}
                     className="pointer-events-auto"
                   >

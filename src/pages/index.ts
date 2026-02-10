@@ -5,3 +5,6 @@ export { default as Converter } from "./Converter";
 export { default as Settings } from "./Settings";
 export { default as Statistics } from "./Statistics";
 export { default as History } from "./History";
+export { default as Login } from "./Login";
+export { default as Register } from "./Register";
+export { default as DailyReport } from "./DailyReport";

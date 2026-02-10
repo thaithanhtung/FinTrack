@@ -47,6 +47,8 @@ export type TimeRange = "1D" | "7D" | "1M" | "3M" | "1Y";
 // Cảnh báo giá
 export interface PriceAlert {
   id: string;
+  userId: string; // User ID from auth
+  telegramChatId?: string; // Optional Telegram chat ID for notifications
   goldType: GoldType | "XAU";
   brand?: GoldBrand;
   condition: AlertCondition;
@@ -57,6 +59,44 @@ export interface PriceAlert {
 }
 
 export type AlertCondition = "ABOVE" | "BELOW";
+
+// Database representation (snake_case for Supabase)
+export interface PriceAlertDB {
+  id: string;
+  user_id: string; // User ID from auth
+  telegram_chat_id?: string;
+  gold_type: string;
+  brand?: string;
+  condition: AlertCondition;
+  target_price: number;
+  is_active: boolean;
+  created_at: string;
+  triggered_at?: string;
+}
+
+// User Profile
+export interface UserProfile {
+  id: string;
+  email: string | null;
+  telegramChatId?: string | null;
+  telegramUsername?: string | null;
+  dailyReportEnabled: boolean;
+  reportTime: string; // Format: "HH:MM:SS"
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// Database representation for UserProfile
+export interface UserProfileDB {
+  id: string;
+  email: string | null;
+  telegram_chat_id?: string | null;
+  telegram_username?: string | null;
+  daily_report_enabled: boolean;
+  report_time: string;
+  created_at: string;
+  updated_at: string;
+}
 
 // API Response types
 export interface VNGoldAPIResponse {

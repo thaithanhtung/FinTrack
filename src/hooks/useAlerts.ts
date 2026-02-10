@@ -1,114 +1,138 @@
-import { useState, useEffect, useCallback } from 'react'
-import type { PriceAlert, GoldType, AlertCondition } from '@/types'
-
-const STORAGE_KEY = 'fintrack_alerts'
-
-function generateId(): string {
-  return `alert_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-}
-
-function loadAlerts(): PriceAlert[] {
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY)
-    if (stored) {
-      const alerts = JSON.parse(stored)
-      return alerts.map((alert: PriceAlert) => ({
-        ...alert,
-        createdAt: new Date(alert.createdAt),
-        triggeredAt: alert.triggeredAt ? new Date(alert.triggeredAt) : undefined,
-      }))
-    }
-  } catch (error) {
-    console.error('Error loading alerts:', error)
-  }
-  return []
-}
-
-function saveAlerts(alerts: PriceAlert[]): void {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(alerts))
-  } catch (error) {
-    console.error('Error saving alerts:', error)
-  }
-}
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/lib/supabase";
+import {
+  fetchAlerts,
+  createAlert,
+  updateAlert,
+  deleteAlert,
+  toggleAlert,
+} from "@/services/api/alertsApi";
+import type { PriceAlert, GoldType, AlertCondition, GoldBrand } from "@/types";
+import { useAuth } from "@/contexts/AuthContext";
 
 export function useAlerts() {
-  const [alerts, setAlerts] = useState<PriceAlert[]>(() => loadAlerts())
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
 
-  // Save to localStorage whenever alerts change
-  useEffect(() => {
-    saveAlerts(alerts)
-  }, [alerts])
+  // Fetch alerts (RLS will automatically filter by user_id)
+  const {
+    data: alerts = [],
+    isLoading,
+    error,
+    refetch,
+  } = useQuery({
+    queryKey: ["alerts", user?.id],
+    queryFn: () => fetchAlerts(),
+    enabled: !!user,
+    staleTime: 30000, // 30 seconds
+  });
 
-  const addAlert = useCallback((
-    goldType: GoldType | 'XAU',
+  // Create alert mutation
+  const createMutation = useMutation({
+    mutationFn: async (
+      newAlert: Omit<PriceAlert, "id" | "userId" | "createdAt" | "triggeredAt">
+    ) => {
+      if (!user) {
+        throw new Error("You must be logged in to create alerts");
+      }
+
+      // Get user's telegram chat ID from profile
+      const { data: profile } = await supabase
+        .from("user_profiles")
+        .select("telegram_chat_id")
+        .eq("id", user.id)
+        .single();
+
+      return createAlert({
+        ...newAlert,
+        userId: user.id,
+        telegramChatId: profile?.telegram_chat_id || undefined,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["alerts", user?.id] });
+    },
+  });
+
+  // Update alert mutation
+  const updateMutation = useMutation({
+    mutationFn: ({
+      id,
+      updates,
+    }: {
+      id: string;
+      updates: Partial<
+        Pick<PriceAlert, "isActive" | "targetPrice" | "condition">
+      >;
+    }) => updateAlert(id, updates),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["alerts", user?.id] });
+    },
+  });
+
+  // Delete alert mutation
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => deleteAlert(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["alerts", user?.id] });
+    },
+  });
+
+  // Toggle alert mutation
+  const toggleMutation = useMutation({
+    mutationFn: ({ id, isActive }: { id: string; isActive: boolean }) =>
+      toggleAlert(id, isActive),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["alerts", user?.id] });
+    },
+  });
+
+  // Helper functions
+  const addAlert = (
+    goldType: GoldType | "XAU",
     condition: AlertCondition,
     targetPrice: number,
-    brand?: string
+    brand?: GoldBrand
   ) => {
-    const newAlert: PriceAlert = {
-      id: generateId(),
+    if (!user) {
+      throw new Error("You must be logged in to create alerts");
+    }
+    return createMutation.mutateAsync({
       goldType,
-      brand: brand as PriceAlert['brand'],
       condition,
       targetPrice,
+      brand,
       isActive: true,
-      createdAt: new Date(),
+    });
+  };
+
+  const removeAlert = (id: string) => {
+    return deleteMutation.mutateAsync(id);
+  };
+
+  const toggleAlertStatus = (id: string) => {
+    const alert = alerts.find((a) => a.id === id);
+    if (alert) {
+      return toggleMutation.mutateAsync({ id, isActive: !alert.isActive });
     }
-    setAlerts(prev => [...prev, newAlert])
-    return newAlert
-  }, [])
+  };
 
-  const removeAlert = useCallback((id: string) => {
-    setAlerts(prev => prev.filter(alert => alert.id !== id))
-  }, [])
-
-  const toggleAlert = useCallback((id: string) => {
-    setAlerts(prev => prev.map(alert =>
-      alert.id === id ? { ...alert, isActive: !alert.isActive } : alert
-    ))
-  }, [])
-
-  const triggerAlert = useCallback((id: string) => {
-    setAlerts(prev => prev.map(alert =>
-      alert.id === id ? { ...alert, triggeredAt: new Date(), isActive: false } : alert
-    ))
-  }, [])
-
-  const checkAlerts = useCallback((
-    currentPrices: { goldType: GoldType | 'XAU'; price: number }[]
-  ) => {
-    const triggeredAlerts: PriceAlert[] = []
-    
-    alerts.forEach(alert => {
-      if (!alert.isActive) return
-      
-      const priceData = currentPrices.find(p => p.goldType === alert.goldType)
-      if (!priceData) return
-      
-      const shouldTrigger = 
-        (alert.condition === 'ABOVE' && priceData.price >= alert.targetPrice) ||
-        (alert.condition === 'BELOW' && priceData.price <= alert.targetPrice)
-      
-      if (shouldTrigger) {
-        triggeredAlerts.push(alert)
-        triggerAlert(alert.id)
-      }
-    })
-    
-    return triggeredAlerts
-  }, [alerts, triggerAlert])
-
-  const activeAlerts = alerts.filter(a => a.isActive)
-  const triggeredAlerts = alerts.filter(a => a.triggeredAt)
+  const activeAlerts = alerts.filter((a) => a.isActive);
+  const triggeredAlerts = alerts.filter((a) => a.triggeredAt);
 
   return {
     alerts,
     activeAlerts,
     triggeredAlerts,
+    isLoading,
+    error,
     addAlert,
     removeAlert,
-    toggleAlert,
-    checkAlerts,
-  }
+    toggleAlert: toggleAlertStatus,
+    refetch,
+    isAuthenticated: !!user,
+    isCreating: createMutation.isPending,
+    isUpdating: updateMutation.isPending,
+    isDeleting: deleteMutation.isPending,
+  };
 }

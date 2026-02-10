@@ -7,3 +7,4 @@ export * from "./usePriceHistory";
 export * from "./usePriceComparison";
 export * from "./useTrendAnalysis";
 export * from "./useVolatility";
+export * from "./usePageTracking";

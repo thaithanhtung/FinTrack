@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { analytics } from "@/lib/analytics";
 
 export type Theme = "light" | "dark";
 
@@ -21,6 +22,8 @@ export const useThemeStore = create<ThemeStore>()(
         } else {
           document.documentElement.classList.remove("dark");
         }
+        // Track theme change
+        analytics.changeTheme(theme);
       },
       toggleTheme: () => {
         set((state) => {
@@ -31,6 +34,8 @@ export const useThemeStore = create<ThemeStore>()(
           } else {
             document.documentElement.classList.remove("dark");
           }
+          // Track theme change
+          analytics.changeTheme(newTheme);
           return { theme: newTheme };
         });
       },

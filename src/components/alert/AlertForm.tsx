@@ -1,18 +1,20 @@
-import { useState } from "react";
-import { Bell, TrendingUp, TrendingDown } from "lucide-react";
+import { useState, FormEvent } from "react";
+import { Bell, TrendingUp, TrendingDown, Info } from "lucide-react";
 import { Card, CardHeader, Button } from "@/components/common";
 import { useAlerts } from "@/hooks";
+import { useAuth } from "@/contexts/AuthContext";
 import { formatVND, formatUSD } from "@/services/utils";
 import { useTranslation } from "react-i18next";
+import { Link } from "react-router-dom";
 import type { GoldType, AlertCondition } from "@/types";
 
 export function AlertForm() {
   const { t } = useTranslation();
-  const { addAlert } = useAlerts();
+  const { user } = useAuth();
+  const { addAlert, isCreating } = useAlerts();
   const [goldType, setGoldType] = useState<GoldType | "XAU">("XAU");
   const [condition, setCondition] = useState<AlertCondition>("ABOVE");
   const [targetPrice, setTargetPrice] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const isWorldGold = goldType === "XAU";
 
@@ -22,24 +24,49 @@ export function AlertForm() {
     { value: "NHAN_9999", label: t("price.nhan9999") },
   ];
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (!targetPrice) return;
 
-    setIsSubmitting(true);
-
     const price = parseFloat(targetPrice.replace(/,/g, ""));
-    addAlert(goldType, condition, price);
 
-    setTargetPrice("");
-    setIsSubmitting(false);
+    try {
+      await addAlert(goldType, condition, price);
+      setTargetPrice("");
+    } catch (error) {
+      console.error("Error creating alert:", error);
+      alert("Không thể tạo alert. Vui lòng thử lại.");
+    }
   };
 
   const formatInputPrice = (value: string) => {
-    // Remove non-numeric characters except decimal point
     const numericValue = value.replace(/[^0-9.]/g, "");
     return numericValue;
   };
+
+  if (!user) {
+    return (
+      <Card>
+        <div className="text-center py-8">
+          <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gold-100 dark:bg-gold-900/30 flex items-center justify-center">
+            <Bell size={28} className="text-gold-600 dark:text-gold-400" />
+          </div>
+          <p className="text-gray-600 dark:text-gray-300 font-medium mb-2">
+            Bạn cần đăng nhập
+          </p>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+            Vui lòng đăng nhập để sử dụng tính năng Alerts
+          </p>
+          <Link
+            to="/login"
+            className="inline-block px-4 py-2 bg-gold-500 hover:bg-gold-600 text-white rounded-xl transition-colors"
+          >
+            Đăng nhập ngay
+          </Link>
+        </div>
+      </Card>
+    );
+  }
 
   return (
     <Card>
@@ -48,6 +75,28 @@ export function AlertForm() {
         subtitle={t("alerts.subtitle")}
         action={<Bell size={18} className="text-gold-500 dark:text-gold-400" />}
       />
+
+      {/* Telegram Setup Info */}
+      <div className="mb-4 p-3 rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
+        <div className="flex items-start gap-2">
+          <Info
+            size={16}
+            className="text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0"
+          />
+          <div className="flex-1 text-sm">
+            <p className="text-blue-700 dark:text-blue-300 mb-1">
+              <strong>Nhận thông báo qua Telegram:</strong>
+            </p>
+            <p className="text-blue-600 dark:text-blue-400 text-xs">
+              Vào{" "}
+              <Link to="/settings" className="underline font-medium">
+                Settings
+              </Link>{" "}
+              để liên kết tài khoản Telegram của bạn.
+            </p>
+          </div>
+        </div>
+      </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
         {/* Gold type selector */}
@@ -132,7 +181,7 @@ export function AlertForm() {
           type="submit"
           className="w-full"
           disabled={!targetPrice}
-          isLoading={isSubmitting}
+          isLoading={isCreating}
         >
           <Bell size={18} />
           {t("alerts.createAlert")}

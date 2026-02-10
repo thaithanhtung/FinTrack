@@ -216,3 +216,19 @@ body {
   background: linear-gradient(90deg, #374151 0%, #4b5563 50%, #374151 100%);
   background-size: 1000px 100%;
 }
+
+/* View Transition API - Theme Toggle Animation */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+
+/* Default: new content is on top (for light -> dark) */
+::view-transition-old(root) {
+  z-index: 1;
+}
+
+::view-transition-new(root) {
+  z-index: 9999;
+}

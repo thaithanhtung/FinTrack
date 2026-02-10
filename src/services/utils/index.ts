@@ -4,3 +4,4 @@ export * from "./statistics";
 export * from "./volatility";
 export * from "./trendAnalysis";
 export * from "./export";
+export * from "./migrateAlerts";

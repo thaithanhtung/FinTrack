@@ -5,8 +5,10 @@ import {
   TrendingUp,
   TrendingDown,
   Check,
+  Loader,
+  AlertCircle,
 } from "lucide-react";
-import { Card, CardHeader } from "@/components/common";
+import { Card, CardHeader, Loading } from "@/components/common";
 import { useAlerts } from "@/hooks";
 import { formatVND, formatUSD, getGoldTypeName } from "@/services/utils";
 import { useTranslation } from "react-i18next";
@@ -30,6 +32,14 @@ function AlertItem({ alert, onToggle, onRemove }: AlertItemProps) {
     alert.condition === "ABOVE"
       ? "bg-up/10 dark:bg-green-900/30"
       : "bg-down/10 dark:bg-red-900/30";
+
+  // Mask chat ID for privacy
+  const maskChatId = (chatId: string): string => {
+    if (chatId.length <= 6) return chatId;
+    const start = chatId.substring(0, 3);
+    const end = chatId.substring(chatId.length - 3);
+    return `${start}****${end}`;
+  };
 
   const formatTimeAgo = (date: Date): string => {
     const now = new Date();
@@ -124,10 +134,45 @@ function AlertItem({ alert, onToggle, onRemove }: AlertItemProps) {
 
 export function AlertList() {
   const { t } = useTranslation();
-  const { alerts, toggleAlert, removeAlert } = useAlerts();
+  const {
+    alerts,
+    toggleAlert,
+    removeAlert,
+    isLoading,
+    error,
+    isAuthenticated,
+  } = useAlerts();
 
   const activeAlerts = alerts.filter((a) => a.isActive);
   const inactiveAlerts = alerts.filter((a) => !a.isActive);
+
+  if (isLoading) {
+    return (
+      <Card>
+        <div className="flex items-center justify-center py-12">
+          <Loading />
+        </div>
+      </Card>
+    );
+  }
+
+  if (error) {
+    return (
+      <Card>
+        <div className="text-center py-8">
+          <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
+            <AlertCircle size={28} className="text-red-600 dark:text-red-400" />
+          </div>
+          <p className="text-gray-600 dark:text-gray-300 font-medium">
+            Lỗi tải alerts
+          </p>
+          <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">
+            {error instanceof Error ? error.message : "Vui lòng thử lại sau"}
+          </p>
+        </div>
+      </Card>
+    );
+  }
 
   if (alerts.length === 0) {
     return (
