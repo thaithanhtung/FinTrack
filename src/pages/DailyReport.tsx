@@ -135,6 +135,69 @@ export default function DailyReport() {
     },
   });
 
+  // Send instant report mutation
+  const sendInstantReportMutation = useMutation({
+    mutationFn: async () => {
+      if (!user) throw new Error("Not authenticated");
+
+      const { data, error } = await supabase.functions.invoke(
+        "send-instant-report",
+        {
+          body: { userId: user.id },
+        }
+      );
+
+      // Handle Supabase function invocation error
+      if (error) {
+        console.error("Function invocation error:", error);
+        throw new Error(error.message || "Không thể kết nối tới server");
+      }
+
+      // Handle API response error
+      if (!data.success) {
+        throw new Error(data.error || "Gửi báo cáo thất bại");
+      }
+
+      return data;
+    },
+    onSuccess: () => {
+      setTestResult({
+        type: "success",
+        message: "🎉 Đã gửi báo cáo giá vàng thành công!",
+      });
+      setTimeout(() => setTestResult(null), 8000); // Longer for success
+    },
+    onError: (error: any) => {
+      console.error("Send instant report error:", error);
+
+      // Extract error message
+      let errorMsg = error.message || "❌ Không thể gửi báo cáo";
+
+      // Friendly error messages for common cases
+      if (errorMsg.includes("TELEGRAM_BOT_TOKEN")) {
+        errorMsg = "❌ Bot chưa được cấu hình. Vui lòng liên hệ admin.";
+      } else if (errorMsg.includes("chat not found")) {
+        errorMsg =
+          "❌ Chat ID không hợp lệ. Vui lòng nhắn /start cho bot trước.";
+      } else if (errorMsg.includes("bot was blocked")) {
+        errorMsg = "❌ Bot đã bị chặn. Vui lòng bỏ chặn bot và thử lại.";
+      } else if (errorMsg.includes("Telegram Chat ID not configured")) {
+        errorMsg = "❌ Chưa cấu hình Telegram Chat ID.";
+      } else if (errorMsg.includes("Function not found")) {
+        errorMsg =
+          "❌ Tính năng gửi báo cáo chưa sẵn sàng. Vui lòng thử lại sau.";
+      } else if (errorMsg.includes("network") || errorMsg.includes("fetch")) {
+        errorMsg = "❌ Lỗi kết nối. Vui lòng kiểm tra internet và thử lại.";
+      }
+
+      setTestResult({
+        type: "error",
+        message: errorMsg,
+      });
+      setTimeout(() => setTestResult(null), 8000);
+    },
+  });
+
   const handleSaveChatId = async () => {
     if (!chatId.trim()) return;
     await updateChatIdMutation.mutateAsync(chatId.trim());
@@ -147,8 +210,10 @@ export default function DailyReport() {
     });
   };
 
-  const handleTestTelegram = async () => {
-    if (!chatId.trim()) {
+  const handleTestTelegram = async (testChatId?: string) => {
+    const idToTest = testChatId || chatId.trim() || profile?.telegramChatId;
+
+    if (!idToTest) {
       setTestResult({
         type: "error",
         message: "Vui lòng nhập Chat ID trước khi test",
@@ -156,7 +221,7 @@ export default function DailyReport() {
       setTimeout(() => setTestResult(null), 3000);
       return;
     }
-    await testTelegramMutation.mutateAsync(chatId.trim());
+    await testTelegramMutation.mutateAsync(idToTest);
   };
 
   // Not logged in
@@ -444,7 +509,7 @@ export default function DailyReport() {
               />
               <div className="flex gap-2">
                 <Button
-                  onClick={handleTestTelegram}
+                  onClick={() => handleTestTelegram()}
                   disabled={!chatId.trim()}
                   isLoading={testTelegramMutation.isPending}
                   className="flex-1 bg-purple-500 hover:bg-purple-600 border-0"
@@ -564,6 +629,45 @@ export default function DailyReport() {
           />
 
           <div className="space-y-3">
+            {/* Test Result Message - Show in Preview section too */}
+            {testResult && (
+              <div
+                className={`p-4 rounded-xl border flex items-start gap-3 animate-in fade-in slide-in-from-top-2 duration-300 ${
+                  testResult.type === "success"
+                    ? "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800"
+                    : "bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800"
+                }`}
+              >
+                {testResult.type === "success" ? (
+                  <CheckCircle
+                    size={20}
+                    className="text-green-600 dark:text-green-400 mt-0.5 flex-shrink-0"
+                  />
+                ) : (
+                  <AlertCircle
+                    size={20}
+                    className="text-red-600 dark:text-red-400 mt-0.5 flex-shrink-0"
+                  />
+                )}
+                <div className="flex-1">
+                  <p
+                    className={`text-sm font-medium ${
+                      testResult.type === "success"
+                        ? "text-green-700 dark:text-green-300"
+                        : "text-red-700 dark:text-red-300"
+                    }`}
+                  >
+                    {testResult.message}
+                  </p>
+                  {testResult.type === "success" && (
+                    <p className="text-xs text-green-600 dark:text-green-400 mt-1">
+                      Mở ứng dụng Telegram để xem báo cáo chi tiết
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
+
             <div className="flex items-center justify-between py-2 border-b border-gray-100 dark:border-gray-800">
               <span className="text-sm text-gray-600 dark:text-gray-400">
                 Trạng thái
@@ -604,6 +708,33 @@ export default function DailyReport() {
               <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
                 {user.email}
               </span>
+            </div>
+          </div>
+
+          {/* Send Instant Report Button */}
+          <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-800">
+            <div className="text-center space-y-3">
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                Nhận báo cáo giá vàng ngay lập tức
+              </p>
+              <Button
+                onClick={() => sendInstantReportMutation.mutate()}
+                isLoading={sendInstantReportMutation.isPending}
+                disabled={!profile?.telegramChatId}
+                className="bg-gradient-to-r from-gold-500 to-gold-600 hover:from-gold-600 hover:to-gold-700 border-0 text-white shadow-lg hover:shadow-xl transition-all"
+              >
+                <Zap size={18} />
+                {sendInstantReportMutation.isPending
+                  ? "Đang gửi..."
+                  : "Gửi báo cáo ngay"}
+              </Button>
+
+              {/* Quick tip */}
+              {!sendInstantReportMutation.isPending && !testResult && (
+                <p className="text-xs text-gray-400 dark:text-gray-500">
+                  💡 Báo cáo sẽ được gửi với dữ liệu giá vàng mới nhất
+                </p>
+              )}
             </div>
           </div>
         </Card>
