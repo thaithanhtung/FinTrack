@@ -309,38 +309,122 @@ export default function DailyReport() {
               </div>
             </div>
           ) : (
-            <div className="p-3 rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
-              <div className="flex items-start gap-2">
-                <Info
-                  size={16}
-                  className="text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0"
-                />
-                <div className="flex-1">
-                  <p className="text-sm text-blue-700 dark:text-blue-300 mb-2">
-                    <strong>Cách lấy Chat ID:</strong>
-                  </p>
-                  <ol className="text-xs text-blue-600 dark:text-blue-400 space-y-1 list-decimal list-inside">
-                    <li>
-                      Mở Telegram và tìm bot <strong>@userinfobot</strong>
-                    </li>
-                    <li>
-                      Nhắn tin{" "}
-                      <code className="bg-blue-100 dark:bg-blue-900 px-1 rounded">
-                        /start
-                      </code>
-                    </li>
-                    <li>Bot sẽ trả về Chat ID của bạn (dạng số)</li>
-                    <li>Copy và paste vào ô bên dưới</li>
-                  </ol>
-                  <a
-                    href="https://t.me/userinfobot"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 text-xs text-blue-600 dark:text-blue-400 hover:underline mt-2"
-                  >
-                    <ExternalLink size={12} />
-                    Mở @userinfobot
-                  </a>
+            <div className="space-y-3">
+              <div className="p-4 rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
+                <div className="flex items-start gap-2">
+                  <Info
+                    size={18}
+                    className="text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0"
+                  />
+                  <div className="flex-1">
+                    <p className="text-sm font-semibold text-blue-700 dark:text-blue-300 mb-3">
+                      📱 Hướng dẫn lấy Telegram Chat ID
+                    </p>
+
+                    {/* Method 1 */}
+                    <div className="mb-4">
+                      <p className="text-sm font-medium text-blue-800 dark:text-blue-200 mb-2">
+                        ✅ Phương pháp 1: Dùng Bot (Khuyến nghị)
+                      </p>
+                      <ol className="text-xs text-blue-600 dark:text-blue-400 space-y-1.5 list-decimal list-inside ml-2">
+                        <li>
+                          Mở Telegram và tìm bot{" "}
+                          <strong className="font-semibold">
+                            @userinfobot
+                          </strong>{" "}
+                          hoặc{" "}
+                          <strong className="font-semibold">
+                            @getmyid_bot
+                          </strong>
+                        </li>
+                        <li>
+                          Nhấn{" "}
+                          <code className="bg-blue-100 dark:bg-blue-900 px-1.5 py-0.5 rounded font-mono">
+                            Start
+                          </code>{" "}
+                          hoặc gửi tin nhắn{" "}
+                          <code className="bg-blue-100 dark:bg-blue-900 px-1.5 py-0.5 rounded font-mono">
+                            /start
+                          </code>
+                        </li>
+                        <li>
+                          Bot sẽ tự động trả về Chat ID của bạn (dạng số, ví dụ:{" "}
+                          <code className="bg-blue-100 dark:bg-blue-900 px-1.5 py-0.5 rounded font-mono">
+                            123456789
+                          </code>
+                          )
+                        </li>
+                        <li>Copy số Chat ID và paste vào ô bên dưới</li>
+                      </ol>
+                      <div className="flex gap-2 mt-2">
+                        <a
+                          href="https://t.me/userinfobot"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 text-xs font-medium text-blue-600 dark:text-blue-400 hover:underline"
+                        >
+                          <ExternalLink size={12} />
+                          Mở @userinfobot
+                        </a>
+                        <span className="text-xs text-blue-400 dark:text-blue-500">
+                          |
+                        </span>
+                        <a
+                          href="https://t.me/getmyid_bot"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 text-xs font-medium text-blue-600 dark:text-blue-400 hover:underline"
+                        >
+                          <ExternalLink size={12} />
+                          Mở @getmyid_bot
+                        </a>
+                      </div>
+                    </div>
+
+                    {/* Method 2 */}
+                    <div className="pt-3 border-t border-blue-200 dark:border-blue-800">
+                      <p className="text-sm font-medium text-blue-800 dark:text-blue-200 mb-2">
+                        🔧 Phương pháp 2: Dùng Telegram Web
+                      </p>
+                      <ol className="text-xs text-blue-600 dark:text-blue-400 space-y-1.5 list-decimal list-inside ml-2">
+                        <li>
+                          Mở{" "}
+                          <a
+                            href="https://web.telegram.org"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="underline hover:text-blue-700 dark:hover:text-blue-300"
+                          >
+                            web.telegram.org
+                          </a>{" "}
+                          và đăng nhập
+                        </li>
+                        <li>Nhắn tin cho chính bạn (Saved Messages)</li>
+                        <li>
+                          Xem URL trên thanh địa chỉ, Chat ID sẽ nằm sau{" "}
+                          <code className="bg-blue-100 dark:bg-blue-900 px-1.5 py-0.5 rounded font-mono">
+                            #
+                          </code>
+                        </li>
+                        <li>
+                          Ví dụ:{" "}
+                          <code className="bg-blue-100 dark:bg-blue-900 px-1.5 py-0.5 rounded font-mono text-[10px]">
+                            web.telegram.org/#123456789
+                          </code>{" "}
+                          → Chat ID là <strong>123456789</strong>
+                        </li>
+                      </ol>
+                    </div>
+
+                    {/* Important Note */}
+                    <div className="mt-3 p-2 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+                      <p className="text-xs text-yellow-700 dark:text-yellow-300">
+                        <strong>⚠️ Lưu ý:</strong> Chat ID là một dãy số (có thể
+                        âm hoặc dương). Không nhầm lẫn với username Telegram
+                        (bắt đầu bằng @).
+                      </p>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>

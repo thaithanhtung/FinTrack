@@ -68,9 +68,11 @@ export function clearOldAlerts(): void {
  */
 export function transformOldAlert(
   oldAlert: OldPriceAlert,
+  userId: string,
   telegramChatId: string
 ): Omit<PriceAlert, "id" | "createdAt" | "triggeredAt"> {
   return {
+    userId,
     telegramChatId,
     goldType: oldAlert.goldType as any,
     brand: oldAlert.brand as any,
@@ -85,6 +87,7 @@ export function transformOldAlert(
  * Returns number of alerts migrated
  */
 export async function migrateAlertsToSupabase(
+  userId: string,
   telegramChatId: string,
   createAlertFn: (
     alert: Omit<PriceAlert, "id" | "createdAt" | "triggeredAt">
@@ -105,7 +108,7 @@ export async function migrateAlertsToSupabase(
 
   for (const oldAlert of oldAlerts) {
     try {
-      const newAlert = transformOldAlert(oldAlert, telegramChatId);
+      const newAlert = transformOldAlert(oldAlert, userId, telegramChatId);
       await createAlertFn(newAlert);
       success++;
     } catch (error) {

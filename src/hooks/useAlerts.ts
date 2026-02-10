@@ -46,7 +46,7 @@ export function useAlerts() {
       return createAlert({
         ...newAlert,
         userId: user.id,
-        telegramChatId: profile?.telegram_chat_id || undefined,
+        telegramChatId: (profile as any)?.telegram_chat_id || undefined,
       });
     },
     onSuccess: () => {

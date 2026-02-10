@@ -118,11 +118,29 @@ export async function upsertUserProfile(
   updates: Partial<Omit<UserProfile, "id" | "createdAt" | "updatedAt">>
 ): Promise<void> {
   try {
-    const { error } = await supabase.from("user_profiles").upsert({
+    // Transform camelCase to snake_case for database
+    const dbUpdates: any = {
       id: userId,
-      ...updates,
       updated_at: new Date().toISOString(),
-    });
+    };
+
+    if (updates.email !== undefined) {
+      dbUpdates.email = updates.email;
+    }
+    if (updates.telegramChatId !== undefined) {
+      dbUpdates.telegram_chat_id = updates.telegramChatId;
+    }
+    if (updates.telegramUsername !== undefined) {
+      dbUpdates.telegram_username = updates.telegramUsername;
+    }
+    if (updates.dailyReportEnabled !== undefined) {
+      dbUpdates.daily_report_enabled = updates.dailyReportEnabled;
+    }
+    if (updates.reportTime !== undefined) {
+      dbUpdates.report_time = updates.reportTime;
+    }
+
+    const { error } = await supabase.from("user_profiles").upsert(dbUpdates);
 
     if (error) {
       console.error("Error upserting user profile:", error);

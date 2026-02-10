@@ -74,7 +74,7 @@ export async function createAlert(
 
     const { data, error } = await supabase
       .from("price_alerts")
-      .insert(dbAlert)
+      .insert(dbAlert as any)
       .select()
       .single();
 
@@ -87,7 +87,7 @@ export async function createAlert(
       throw new Error("No data returned after creating alert");
     }
 
-    return transformAlert(data);
+    return transformAlert(data as PriceAlertDB);
   } catch (error) {
     console.error("Error in createAlert:", error);
     throw error;
